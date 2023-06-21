@@ -7,41 +7,38 @@ import plotly.graph_objects as go
 # Load the data from the table
 df = pd.read_csv('investments_table.csv')  # Replace 'investments_table.csv' with your actual file name
 
-# Filter for the last 3 years
-df['procedure_date'] = pd.to_datetime(df['procedure_date'])
-last_three_years = pd.date_range(end=df['procedure_date'].max(), periods=3, freq='Y')
-df_last_three_years = df[df['procedure_date'].isin(last_three_years)]
+# Group by participant_type_en, person_type_en, tenure_type_en, property_type_en and count the number of investments
+grouped_data = df.groupby(['participant_type_en', 'person_type_en', 'tenure_type_en', 'property_type_en']).size().reset_index(name='count')
 
-# Filter for the top 10 countries
-top_10_countries = df_last_three_years['country_name_en'].value_counts().nlargest(10).index
-df_top_10_countries = df_last_three_years[df_last_three_years['country_name_en'].isin(top_10_countries)]
+# Create nodes for Sankey chart
+nodes = [
+    dict(label=participant_type) for participant_type in grouped_data['participant_type_en'].unique()
+] + [
+    dict(label=person_type) for person_type in grouped_data['person_type_en'].unique()
+] + [
+    dict(label=tenure_type) for tenure_type in grouped_data['tenure_type_en'].unique()
+] + [
+    dict(label=property_type) for property_type in grouped_data['property_type_en'].unique()
+]
 
-# Group by procedure_date and country_name_en and count the number of investments
-grouped_data = df_top_10_countries.groupby(['procedure_date', 'country_name_en']).size().reset_index(name='count')
-
-# Create nodes and links for Sankey chart
-nodes = []
-node_ids = {}
+# Create links for Sankey chart
 links = []
-
-node_id = 0
-
-for index, row in grouped_data.iterrows():
-    source = row['procedure_date']
-    target = row['country_name_en']
-    count = row['count']
-    
-    if source not in node_ids:
-        node_ids[source] = node_id
-        nodes.append({'label': source})
-        node_id += 1
-    
-    if target not in node_ids:
-        node_ids[target] = node_id
-        nodes.append({'label': target})
-        node_id += 1
-    
-    links.append({'source': node_ids[source], 'target': node_ids[target], 'value': count})
+for _, row in grouped_data.iterrows():
+    links.append(dict(
+        source=row['participant_type_en'],
+        target=row['person_type_en'],
+        value=row['count']
+    ))
+    links.append(dict(
+        source=row['person_type_en'],
+        target=row['tenure_type_en'],
+        value=row['count']
+    ))
+    links.append(dict(
+        source=row['tenure_type_en'],
+        target=row['property_type_en'],
+        value=row['count']
+    ))
 
 # Create Sankey diagram
 fig = go.Figure(data=[go.Sankey(
@@ -60,7 +57,7 @@ fig = go.Figure(data=[go.Sankey(
 
 # Update layout
 fig.update_layout(
-    title="Investment Flow between Nationalities over Time (Top 10 Countries, Last 3 Years)",
+    title="Investment Flow: Participant Type -> Person Type -> Tenure Type -> Property Type",
     font=dict(size=10),
     height=600
 )
