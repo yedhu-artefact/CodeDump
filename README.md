@@ -7,11 +7,17 @@ import plotly.graph_objects as go
 # Load the data from the table
 df = pd.read_csv('investments_table.csv')  # Replace 'investments_table.csv' with your actual file name
 
-# Filter for relevant columns
-df_sankey = df[['procedure_date', 'country_name_en']]
+# Filter for the last 3 years
+df['procedure_date'] = pd.to_datetime(df['procedure_date'])
+last_three_years = pd.date_range(end=df['procedure_date'].max(), periods=3, freq='Y')
+df_last_three_years = df[df['procedure_date'].isin(last_three_years)]
+
+# Filter for the top 10 countries
+top_10_countries = df_last_three_years['country_name_en'].value_counts().nlargest(10).index
+df_top_10_countries = df_last_three_years[df_last_three_years['country_name_en'].isin(top_10_countries)]
 
 # Group by procedure_date and country_name_en and count the number of investments
-grouped_data = df_sankey.groupby(['procedure_date', 'country_name_en']).size().reset_index(name='count')
+grouped_data = df_top_10_countries.groupby(['procedure_date', 'country_name_en']).size().reset_index(name='count')
 
 # Create nodes and links for Sankey chart
 nodes = []
@@ -54,7 +60,7 @@ fig = go.Figure(data=[go.Sankey(
 
 # Update layout
 fig.update_layout(
-    title="Investment Flow between Nationalities over Time",
+    title="Investment Flow between Nationalities over Time (Top 10 Countries, Last 3 Years)",
     font=dict(size=10),
     height=600
 )
