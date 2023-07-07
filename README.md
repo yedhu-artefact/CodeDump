@@ -2,66 +2,30 @@
 
 ```
 import pandas as pd
-import plotly.graph_objects as go
+import re
+import numpy as np
 
-# Load the data from the table
-df = pd.read_csv('investments_table.csv')  # Replace 'investments_table.csv' with your actual file name
+# Read your data into a Pandas DataFrame
+df = pd.read_csv('your_data.csv')
 
-# Group by participant_type_en, person_type_en, tenure_type_en, property_type_en and count the number of investments
-grouped_data = df.groupby(['participant_type_en', 'person_type_en', 'tenure_type_en', 'property_type_en']).size().reset_index(name='count')
+# Regular expression for validating Emirates ID format
+emirates_id_regex = r'^784-?[0-9]{4}-?[0-9]{7}-?[0-9]{1}$'
 
-# Create nodes for Sankey chart
-nodes = [
-    dict(label=participant_type) for participant_type in grouped_data['participant_type_en'].unique()
-] + [
-    dict(label=person_type) for person_type in grouped_data['person_type_en'].unique()
-] + [
-    dict(label=tenure_type) for tenure_type in grouped_data['tenure_type_en'].unique()
-] + [
-    dict(label=property_type) for property_type in grouped_data['property_type_en'].unique()
-]
+# Function to check if a number is valid using Luhn's algorithm
+def is_luhn_valid(number):
+    digits = [int(digit) for digit in str(number)]
+    odd_digits = digits[-1::-2]
+    even_digits = digits[-2::-2]
+    total = sum(odd_digits)
+    for digit in even_digits:
+        total += sum(divmod(digit * 2, 10))
+    return total % 10 == 0
 
-# Create links for Sankey chart
-links = []
-for _, row in grouped_data.iterrows():
-    links.append(dict(
-        source=row['participant_type_en'],
-        target=row['person_type_en'],
-        value=row['count']
-    ))
-    links.append(dict(
-        source=row['person_type_en'],
-        target=row['tenure_type_en'],
-        value=row['count']
-    ))
-    links.append(dict(
-        source=row['tenure_type_en'],
-        target=row['property_type_en'],
-        value=row['count']
-    ))
+# Create a new column with valid Emirates ID values
+valid_emirates_id = df['emirates_id'].astype(str).apply(lambda x: x if (bool(re.match(emirates_id_regex, x)) and is_luhn_valid(x.replace('-', ''))) else np.nan)
+df['valid_emirates_id'] = valid_emirates_id
 
-# Create Sankey diagram
-fig = go.Figure(data=[go.Sankey(
-    node=dict(
-        pad=15,
-        thickness=20,
-        line=dict(color='black', width=0.5),
-        label=nodes
-    ),
-    link=dict(
-        source=[link['source'] for link in links],
-        target=[link['target'] for link in links],
-        value=[link['value'] for link in links]
-    )
-)])
+# Display the updated DataFrame
+print(df)
 
-# Update layout
-fig.update_layout(
-    title="Investment Flow: Participant Type -> Person Type -> Tenure Type -> Property Type",
-    font=dict(size=10),
-    height=600
-)
-
-# Show the chart
-fig.show()
 ```
