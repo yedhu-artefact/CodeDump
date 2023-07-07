@@ -1,6 +1,13 @@
 # CodeDump
 
 ```
+# Test the logic against a single number
+test_number = "7841234567890123"
+is_valid_test_number = bool(re.match(emirates_id_regex, test_number)) and is_luhn_valid(test_number.replace('-', ''))
+print(f"Test Number: {test_number}, Valid: {is_valid_test_number}")
+
+
+
 import pandas as pd
 import re
 import numpy as np
