@@ -1,6 +1,16 @@
 # CodeDump
 
 ```
+# Regular expression for validating email format
+email_regex = r'^([^@]{2,})@([^@]{2,}\.[^@]{2,})$'
+
+def is_valid_email(email):
+    return bool(re.match(email_regex, email))
+
+# Replace email addresses with only 1 character in username or domain with Null
+df.loc[~df['email'].apply(is_valid_email, na=False), 'email'] = np.nan
+
+
 # Replace 10 most frequent values with Null in 'phone_number' column
 top_10_phone_numbers = df['phone_number'].value_counts().nlargest(10).index
 df.loc[df['phone_number'].isin(top_10_phone_numbers), 'phone_number'] = np.nan
