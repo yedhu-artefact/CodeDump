@@ -1,6 +1,15 @@
 # CodeDump
 
 ```
+# Replace 10 most frequent values with Null in 'phone_number' column
+top_10_phone_numbers = df['phone_number'].value_counts().nlargest(10).index
+df.loc[df['phone_number'].isin(top_10_phone_numbers), 'phone_number'] = np.nan
+
+# Replace 10 most frequent values with Null in 'email' column
+top_10_emails = df['email'].value_counts().nlargest(10).index
+df.loc[df['email'].isin(top_10_emails), 'email'] = np.nan
+
+
 import pandas as pd
 import re
 import numpy as np
