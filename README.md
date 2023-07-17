@@ -1,6 +1,13 @@
 # CodeDump
 
 ```
+# Step 5: Group by participant_id and aggregate columns with sum or mean
+aggregation_dict = {col: 'sum' for col in table2.columns if col not in ['participant_id', 'column1', 'column2', 'column3']}
+aggregation_dict.update({'column1': 'mean', 'column2': 'mean', 'column3': 'mean'})
+grouped_data = table2.groupby('participant_id').agg(aggregation_dict).reset_index()
+
+
+
 # Regular expression for validating email format
 email_regex = r'^([^@]{2,})@([^@]{2,}\.[^@]{2,})$'
 
