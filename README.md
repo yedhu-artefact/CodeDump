@@ -1,6 +1,16 @@
 # CodeDump
 
 ```
+# Get feature importances
+feature_importances = rf.feature_importances_
+
+# Create a DataFrame of feature importance
+importance_df = pd.DataFrame({'Feature': investor_group.columns, 'Importance': feature_importances})
+importance_df = importance_df.sort_values(by='Importance', ascending=False)
+print("\nFeature Importance:")
+print(importance_df)
+
+
 # Step 5: Group by participant_id and aggregate columns with sum or mean
 aggregation_dict = {col: 'sum' for col in table2.columns if col not in ['participant_id', 'column1', 'column2', 'column3']}
 aggregation_dict.update({'column1': 'mean', 'column2': 'mean', 'column3': 'mean'})
@@ -25,6 +35,7 @@ df.loc[df['phone_number'].isin(top_10_phone_numbers), 'phone_number'] = np.nan
 # Replace 10 most frequent values with Null in 'email' column
 top_10_emails = df['email'].value_counts().nlargest(10).index
 df.loc[df['email'].isin(top_10_emails), 'email'] = np.nan
+
 
 
 import pandas as pd
