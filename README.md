@@ -8,20 +8,12 @@ import pandas as pd
 # Group the cities by count of customers
 city_counts = df['city_name'].value_counts()
 
+# Calculate the quartiles of the count distribution
+quartiles = city_counts.quantile([0.25, 0.5, 0.75])
+
 # Determine the cutoffs for city types
-total_customers = len(df)
-cumulative_percentage = 0
-city_type_cutoffs = []
+city_type_cutoffs = [0] + quartiles.tolist() + [float('inf')]
 city_type_labels = ['common', 'premium', 'prime']  # Modify labels as needed
-
-for city, count in city_counts.items():
-    cumulative_percentage += count / total_customers * 100
-    if cumulative_percentage > 90:  # Modify the threshold as needed
-        break
-    city_type_cutoffs.append(count)
-
-# Add the last cutoff as infinity to include all remaining cities
-city_type_cutoffs.append(float('inf'))
 
 # Create a mapping of city names to city types
 city_mapping = {}
@@ -36,4 +28,5 @@ df['city_type'] = df['city_name'].map(city_mapping)
 
 # Print the updated DataFrame
 print(df)
+
 ```
