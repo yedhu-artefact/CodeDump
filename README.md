@@ -3,30 +3,44 @@
 ```
 import pandas as pd
 
-# Assuming you have a DataFrame called 'df' with a 'city_name' column
+# Assuming your data is stored in a pandas DataFrame called 'investments_data'
 
-# Group the cities by count of customers
-city_counts = df['city_name'].value_counts()
+# Define the aggregations dictionary
+aggregations = {
+    'num_purchases': ('cluster_id', 'count'),
+    'num_props_owned': ('is_current_owner', lambda x: sum(x == 1)),
+    'total_purchase_value': ('property_worth', 'sum'),
+    'current_investment_value': ('property_worth', lambda x: sum(x[x['is_current_owner'] == 1])),
+    'avg_investment_value': ('property_worth', lambda x: x[x['is_current_owner'] == 1].mean()),
+    'last_purchase': ('date_of_purchase', lambda x: (pd.to_datetime('today') - x.max()).days),
+    'first_purchase': ('date_of_purchase', lambda x: (pd.to_datetime('today') - x.min()).days),
+    'purchase_frequency': ('date_of_purchase', lambda x: len(x) / ((pd.to_datetime('today') - x.min()).days)),
+    'avg_participant_area': ('property_area', 'mean'),
+    'avg_ownership_period': ('date_of_purchase', lambda x: x[x['is_current_owner'] == 1].mean()),
+    'num_distinct_areas': ('area_name', lambda x: len(x.unique())),
+    'nationality_en': ('nationality_en', lambda x: x.value_counts().index[0]),
+    'gender_en': ('gender_en', lambda x: x.value_counts().index[0])
+}
 
-# Calculate the quartiles of the count distribution
-quartiles = city_counts.quantile([0.25, 0.5, 0.75])
+# Group the data by cluster_id and calculate the aggregations
+grouped_data = investments_data.groupby('cluster_id').agg(aggregations)
 
-# Determine the cutoffs for city types
-city_type_cutoffs = [0] + quartiles.tolist() + [float('inf')]
-city_type_labels = ['common', 'premium', 'prime']  # Modify labels as needed
+# Sum the one-hot encoded columns for each cluster_id
+one_hot_columns = ['is_residential', 'is_commercial', 'is_dubai', 'is_sharjah']
+grouped_data[one_hot_columns] = investments_data.groupby('cluster_id')[one_hot_columns].sum()
 
-# Create a mapping of city names to city types
-city_mapping = {}
-for city, count in city_counts.items():
-    for i, cutoff in enumerate(city_type_cutoffs):
-        if count <= cutoff:
-            city_mapping[city] = city_type_labels[i]
-            break
+# Display the resulting grouped and aggregated data
+print(grouped_data)
 
-# Add a new column 'city_type' based on the mapping
-df['city_type'] = df['city_name'].map(city_mapping)
+# Find all columns that start with 'is_'
+one_hot_columns = [column for column in investments_data.columns if column.startswith('is_')]
 
-# Print the updated DataFrame
-print(df)
+# Group the data by cluster_id and calculate the aggregations
+grouped_data = investments_data.groupby('cluster_id').agg(aggregations)
 
+# Sum the one-hot encoded columns for each cluster_id
+grouped_data[one_hot_columns] = investments_data.groupby('cluster_id')[one_hot_columns].sum()
+
+# Display the resulting grouped and aggregated data
+print(grouped_data)
 ```
