@@ -1,65 +1,39 @@
 # CodeDump
 
 ```
-# Get feature importances
-feature_importances = rf.feature_importances_
-
-# Create a DataFrame of feature importance
-importance_df = pd.DataFrame({'Feature': investor_group.columns, 'Importance': feature_importances})
-importance_df = importance_df.sort_values(by='Importance', ascending=False)
-print("\nFeature Importance:")
-print(importance_df)
-
-
-# Step 5: Group by participant_id and aggregate columns with sum or mean
-aggregation_dict = {col: 'sum' for col in table2.columns if col not in ['participant_id', 'column1', 'column2', 'column3']}
-aggregation_dict.update({'column1': 'mean', 'column2': 'mean', 'column3': 'mean'})
-grouped_data = table2.groupby('participant_id').agg(aggregation_dict).reset_index()
-
-
-
-# Regular expression for validating email format
-email_regex = r'^([^@]{2,})@([^@]{2,}\.[^@]{2,})$'
-
-def is_valid_email(email):
-    return bool(re.match(email_regex, email))
-
-# Replace email addresses with only 1 character in username or domain with Null
-df.loc[~df['email'].apply(is_valid_email, na=False), 'email'] = np.nan
-
-
-# Replace 10 most frequent values with Null in 'phone_number' column
-top_10_phone_numbers = df['phone_number'].value_counts().nlargest(10).index
-df.loc[df['phone_number'].isin(top_10_phone_numbers), 'phone_number'] = np.nan
-
-# Replace 10 most frequent values with Null in 'email' column
-top_10_emails = df['email'].value_counts().nlargest(10).index
-df.loc[df['email'].isin(top_10_emails), 'email'] = np.nan
-
-
-
 import pandas as pd
-import re
-import numpy as np
 
-# Read your data into a Pandas DataFrame
-df = pd.read_csv('your_data.csv')
+# Assuming you have a DataFrame called 'df' with a 'city_name' column
 
-# Clean and validate 'phone_number' column
-df['phone_number'] = df['phone_number'].astype(str).str.replace('[^0-9]', '')
-df.loc[df['phone_number'].str.len() <= 7, 'phone_number'] = np.nan
+# Group the cities by count of customers
+city_counts = df['city_name'].value_counts()
 
-# Clean and validate 'email' column
-df['email'] = df['email'].str.lower()
-df.loc[~df['email'].str.match(r'^[^@]+@[^@]+\.[^@]+$', na=False), 'email'] = np.nan
-df.loc[df['email'].str.contains('test|sample', na=False), 'email'] = np.nan
+# Determine the cutoffs for city types
+total_customers = len(df)
+cumulative_percentage = 0
+city_type_cutoffs = []
+city_type_labels = ['common', 'premium', 'prime']  # Modify labels as needed
 
-# Replace most frequent values with Null
-most_frequent_phone = df['phone_number'].mode().iloc[0]
-most_frequent_email = df['email'].mode().iloc[0]
-df.loc[df['phone_number'] == most_frequent_phone, 'phone_number'] = np.nan
-df.loc[df['email'] == most_frequent_email, 'email'] = np.nan
+for city, count in city_counts.items():
+    cumulative_percentage += count / total_customers * 100
+    if cumulative_percentage > 90:  # Modify the threshold as needed
+        break
+    city_type_cutoffs.append(count)
 
-# Display the updated DataFrame
+# Add the last cutoff as infinity to include all remaining cities
+city_type_cutoffs.append(float('inf'))
+
+# Create a mapping of city names to city types
+city_mapping = {}
+for city, count in city_counts.items():
+    for i, cutoff in enumerate(city_type_cutoffs):
+        if count <= cutoff:
+            city_mapping[city] = city_type_labels[i]
+            break
+
+# Add a new column 'city_type' based on the mapping
+df['city_type'] = df['city_name'].map(city_mapping)
+
+# Print the updated DataFrame
 print(df)
 ```
