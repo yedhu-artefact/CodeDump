@@ -2,45 +2,35 @@
 
 ```
 import pandas as pd
+import matplotlib.pyplot as plt
 
-# Assuming your data is stored in a pandas DataFrame called 'investments_data'
+# Assuming you have a DataFrame named 'investments_df'
+# Replace this with your actual DataFrame or read it from a CSV, Excel, or any other data source.
 
-# Define the aggregations dictionary
-aggregations = {
-    'num_purchases': ('cluster_id', 'count'),
-    'num_props_owned': ('is_current_owner', lambda x: sum(x == 1)),
-    'total_purchase_value': ('property_worth', 'sum'),
-    'current_investment_value': ('property_worth', lambda x: sum(x[x['is_current_owner'] == 1])),
-    'avg_investment_value': ('property_worth', lambda x: x[x['is_current_owner'] == 1].mean()),
-    'last_purchase': ('date_of_purchase', lambda x: (pd.to_datetime('today') - x.max()).days),
-    'first_purchase': ('date_of_purchase', lambda x: (pd.to_datetime('today') - x.min()).days),
-    'purchase_frequency': ('date_of_purchase', lambda x: len(x) / ((pd.to_datetime('today') - x.min()).days)),
-    'avg_participant_area': ('property_area', 'mean'),
-    'avg_ownership_period': ('date_of_purchase', lambda x: x[x['is_current_owner'] == 1].mean()),
-    'num_distinct_areas': ('area_name', lambda x: len(x.unique())),
-    'nationality_en': ('nationality_en', lambda x: x.value_counts().index[0]),
-    'gender_en': ('gender_en', lambda x: x.value_counts().index[0])
+# Sample data
+data = {
+    'participant_id': [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+    'instance_date': ['2023-07-10', '2023-07-10', '2023-07-11', '2023-07-12', '2023-07-12',
+                      '2023-07-13', '2023-07-14', '2023-07-14', '2023-07-15', '2023-07-15']
 }
 
-# Group the data by cluster_id and calculate the aggregations
-grouped_data = investments_data.groupby('cluster_id').agg(aggregations)
+investments_df = pd.DataFrame(data)
 
-# Sum the one-hot encoded columns for each cluster_id
-one_hot_columns = ['is_residential', 'is_commercial', 'is_dubai', 'is_sharjah']
-grouped_data[one_hot_columns] = investments_data.groupby('cluster_id')[one_hot_columns].sum()
+# Convert 'instance_date' column to datetime format
+investments_df['instance_date'] = pd.to_datetime(investments_df['instance_date'])
 
-# Display the resulting grouped and aggregated data
-print(grouped_data)
+# Group by 'instance_date' and count the number of purchases ('participant_id')
+purchase_counts = investments_df.groupby('instance_date')['participant_id'].count()
 
-# Find all columns that start with 'is_'
-one_hot_columns = [column for column in investments_data.columns if column.startswith('is_')]
+# Create the line chart
+plt.figure(figsize=(10, 6))
+plt.plot(purchase_counts.index, purchase_counts.values, marker='o', linestyle='-')
+plt.xlabel('Date')
+plt.ylabel('Number of Purchases')
+plt.title('Number of Purchases Over Time')
+plt.xticks(rotation=45)
+plt.grid(True)
+plt.tight_layout()
+plt.show()
 
-# Group the data by cluster_id and calculate the aggregations
-grouped_data = investments_data.groupby('cluster_id').agg(aggregations)
-
-# Sum the one-hot encoded columns for each cluster_id
-grouped_data[one_hot_columns] = investments_data.groupby('cluster_id')[one_hot_columns].sum()
-
-# Display the resulting grouped and aggregated data
-print(grouped_data)
 ```
