@@ -1,24 +1,50 @@
 # CodeDump
 
 ```
+import pandas as pd
+import numpy as np
+
+# Sample dataframe with NaN and landline numbers for demonstration
+data = {
+    'phone_number': ['(971) 50 1234567', '+971501234567', '501234567', '+1 800 123 4567', '443020123456', '00971501234567', '0971501234567', np.nan, '0241234567', '+97141234567']
+}
+df = pd.DataFrame(data)
+
 # Clean the phone_number column: Keep only numbers and leading plus sign
 df['phone_number'] = df['phone_number'].str.replace('[^0-9+]', '', regex=True)
 
-# Standardize UAE phone numbers
+# Standardize UAE numbers
 def standardize_uae_format(phone):
-    if phone.startswith('9715') and len(phone) == 12:        # Format: +971501234567
-        return '+971 ' + phone[3:5] + ' ' + phone[5:8] + ' ' + phone[8:]
-    elif phone.startswith('009715') and len(phone) == 14:   # Format: 00971501234567
-        return '+971 ' + phone[5:7] + ' ' + phone[7:10] + ' ' + phone[10:]
-    elif phone.startswith('09715') and len(phone) == 13:    # Format: 0971501234567
-        return '+971 ' + phone[4:6] + ' ' + phone[6:9] + ' ' + phone[9:]
-    elif phone.startswith('5') and len(phone) == 9:         # Format: 501234567
-        return '+971 ' + phone[:2] + ' ' + phone[2:5] + ' ' + phone[5:]
+    # If the value is NaN, return it as is
+    if pd.isna(phone):
+        return phone
+    
+    # Mobile Numbers
+    if phone.startswith('9715') and len(phone) == 12:      # Format: +971501234567
+        return '+971' + phone[3:]
+    elif phone.startswith('009715') and len(phone) == 14: # Format: 00971501234567
+        return '+971' + phone[5:]
+    elif phone.startswith('09715') and len(phone) == 13:  # Format: 0971501234567
+        return '+971' + phone[4:]
+    elif phone.startswith('5') and len(phone) == 9:       # Format: 501234567
+        return '+971' + phone
+    
+    # Landline Numbers
+    elif (phone.startswith(('2', '4', '6', '7', '9')) and len(phone) == 9): # Format: 0241234567
+        return '+971' + phone
+    elif phone.startswith('971') and len(phone) == 11:  # Format: +97141234567 (for landlines)
+        return '+971' + phone[3:]
+    elif phone.startswith('00971') and len(phone) == 13: # Format: 0097141234567 (for landlines)
+        return '+971' + phone[5:]
+    elif phone.startswith('0971') and len(phone) == 12:  # Format: 097141234567 (for landlines)
+        return '+971' + phone[4:]
+    
     else:
         return phone
 
 df['phone_number'] = df['phone_number'].apply(standardize_uae_format)
 print(df)
+
 
 
 
