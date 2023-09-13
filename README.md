@@ -1,6 +1,23 @@
 # CodeDump
 
 ```
+
+predicted = forecast['yhat1'][:len(train_df)]
+    actual = train_df['y']
+
+    mse = mean_squared_error(actual, predicted)
+    mape = mean_absolute_percentage_error(actual, predicted)
+
+    st.write(f"Mean Squared Error: {mse}")
+    st.write(f"Mean Absolute Percentage Error: {mape}")
+
+
+
+
+
+
+
+
 df_train, df_test = m.split_df(sf_pv_df, freq="H", valid_p=0.10)
 
 metrics = m.fit(df_train, freq="H", validation_df=df_test, progress="bar")
