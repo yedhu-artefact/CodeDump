@@ -6,8 +6,6 @@ df_train, df_test = m.split_df(sf_pv_df, freq="H", valid_p=0.10)
 metrics = m.fit(df_train, freq="H", validation_df=df_test, progress="bar")
 metrics.tail(1)
 
-
-
 import streamlit as st
 import pandas as pd
 from neuralprophet import NeuralProphet
@@ -44,8 +42,8 @@ elif option == 'Forecast':
     # Button to run the model
     if st.button('Run Model'):
         # Model Training
-        status.write("Training Neural Prophet model...")
-
+        status.write("Initializing Neural Prophet model...")
+        
         model = NeuralProphet(
             n_forecasts=1,
             n_lags=30,
@@ -55,12 +53,15 @@ elif option == 'Forecast':
             uncertainty_samples=100  # Enable uncertainty
         )
 
+        status.write("Adding lagged regressors to the model...")
+        
         # Add lagged regressors if they are available in the data
         lagged_regressors = ['daily_transactions', 'inflation_rate', 'gdp', 'risk_rate', 'stock_index']
         for reg in lagged_regressors:
             if reg in df.columns:
                 model = model.add_lagged_regressor(name=reg)
 
+        status.write("Training the model...")
         metrics = model.fit(train_df, freq="M")
         status.write("Training complete.")
 
@@ -68,6 +69,7 @@ elif option == 'Forecast':
         status.write(f"Making future predictions for the next {num_months} months...")
         future = model.make_future_dataframe(df, periods=num_months)
         forecast = model.predict(future)
+        status.write("Prediction complete.")
 
         # Extract confidence intervals
         lower_bound = forecast['yhat1_lower']
@@ -86,4 +88,6 @@ elif option == 'Forecast':
 
         # Plotting (you can replace this with a more sophisticated plot)
         st.line_chart(forecast_to_use)
+        status.write("Forecasting complete.")
+
 ```
