@@ -2,14 +2,18 @@
 
 ```
 
-predicted = forecast['yhat1'][:len(train_df)]
-    actual = train_df['y']
+# Create the plot
+fig = go.Figure()
 
-    mse = mean_squared_error(actual, predicted)
-    mape = mean_absolute_percentage_error(actual, predicted)
+# Add actual values as a solid line
+fig.add_trace(go.Scatter(x=forecast['ds'][:len(df)], y=forecast['y'][:len(df)], mode='lines', name='Actual', line=dict(width=2)))
 
-    st.write(f"Mean Squared Error: {mse}")
-    st.write(f"Mean Absolute Percentage Error: {mape}")
+# Add forecasted values as a dotted line
+fig.add_trace(go.Scatter(x=forecast['ds'][len(df):], y=forecast['yhat1'][len(df):], mode='lines', name='Forecast',
+                         line=dict(dash='dash', width=2)))
+
+# Show the plot
+fig.show()
 
 
 
