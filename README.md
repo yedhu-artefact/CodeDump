@@ -1,114 +1,73 @@
 # CodeDump
 
 ```
-
-# Create the plot
-fig = go.Figure()
-
-# Add actual values as a solid line
-fig.add_trace(go.Scatter(x=forecast['ds'][:len(df)], y=forecast['y'][:len(df)], mode='lines', name='Actual', line=dict(width=2)))
-
-# Add forecasted values as a dotted line
-fig.add_trace(go.Scatter(x=forecast['ds'][len(df):], y=forecast['yhat1'][len(df):], mode='lines', name='Forecast',
-                         line=dict(dash='dash', width=2)))
-
-# Show the plot
-fig.show()
-
-
-
-
-
-
-
-
-df_train, df_test = m.split_df(sf_pv_df, freq="H", valid_p=0.10)
-
-metrics = m.fit(df_train, freq="H", validation_df=df_test, progress="bar")
-metrics.tail(1)
-
 import streamlit as st
 import pandas as pd
+import numpy as np
 from neuralprophet import NeuralProphet
-
-# Sidebar options
-option = st.sidebar.selectbox(
-    'Select an option',
-    ('Data', 'Forecast', 'Performance')
-)
+from sklearn.linear_model import LinearRegression
 
 # Import data from CSV
-# Replace 'your_data.csv' with the path to your actual CSV file
 df = pd.read_csv('your_data.csv')
-
-# Sort data by date
 df = df.sort_values('ds')
 train_df = df.copy()
 
 # Placeholder for status messages
 status = st.empty()
 
-if option == 'Data':
-    st.write("Training set:")
-    st.write(train_df)
+# Number of months to forecast
+num_months = st.slider("Number of months to forecast:", 1, 24)
 
-elif option == 'Forecast':
-    scenario = st.selectbox(
-        'Select a scenario',
-        ('Optimistic', 'Neutral', 'Pessimistic')
+# Multipliers for features
+multiplier_feature_1 = st.slider("Multiplier for feature_1:", 0.5, 1.5, 1.0)
+multiplier_feature_2 = st.slider("Multiplier for feature_2:", 0.5, 1.5, 1.0)
+
+# Button to run the model
+if st.button('Run Model'):
+    status.write("Initializing Neural Prophet model...")
+    
+    model = NeuralProphet(
+        n_forecasts=1,
+        n_lags=30,
+        yearly_seasonality=True,
+        weekly_seasonality=False,
+        daily_seasonality=False,
+        uncertainty_samples=100
     )
 
-    num_months = st.slider("Number of months to forecast:", 1, 24)
+    # Train separate models for each feature
+    future_regressors = pd.DataFrame()
+    for feature, multiplier in zip(['feature_1', 'feature_2'], [multiplier_feature_1, multiplier_feature_2]):
+        if feature in df.columns:
+            status.write(f"Training model for {feature}...")
+            X = np.arange(len(df)).reshape(-1, 1)
+            y = df[feature].values
+            reg_model = LinearRegression().fit(X, y)
 
-    # Button to run the model
-    if st.button('Run Model'):
-        # Model Training
-        status.write("Initializing Neural Prophet model...")
-        
-        model = NeuralProphet(
-            n_forecasts=1,
-            n_lags=30,
-            yearly_seasonality=True,
-            weekly_seasonality=False,
-            daily_seasonality=False,
-            uncertainty_samples=100  # Enable uncertainty
-        )
+            # Predict future values of the feature
+            X_future = np.arange(len(df), len(df) + num_months).reshape(-1, 1)
+            future_values = reg_model.predict(X_future)
+            future_regressors[feature] = future_values * multiplier  # Apply multiplier
 
-        status.write("Adding lagged regressors to the model...")
-        
-        # Add lagged regressors if they are available in the data
-        lagged_regressors = ['daily_transactions', 'inflation_rate', 'gdp', 'risk_rate', 'stock_index']
-        for reg in lagged_regressors:
-            if reg in df.columns:
-                model = model.add_lagged_regressor(name=reg)
+    # Add lagged regressors to the NeuralProphet model
+    status.write("Adding lagged regressors to the NeuralProphet model...")
+    model = model.add_lagged_regressor(name='feature_1')
+    model = model.add_lagged_regressor(name='feature_2')
 
-        status.write("Training the model...")
-        metrics = model.fit(train_df, freq="M")
-        status.write("Training complete.")
+    status.write("Training the NeuralProphet model...")
+    model.fit(train_df, freq="M")
+    status.write("Training complete.")
 
-        # Make future predictions
-        status.write(f"Making future predictions for the next {num_months} months...")
-        future = model.make_future_dataframe(df, periods=num_months)
-        forecast = model.predict(future)
-        status.write("Prediction complete.")
+    # Make future dataframe
+    future = model.make_future_dataframe(df, periods=num_months)
+    future = pd.concat([future, future_regressors], axis=1)  # Add future regressors
 
-        # Extract confidence intervals
-        lower_bound = forecast['yhat1_lower']
-        upper_bound = forecast['yhat1_upper']
-        yhat = forecast['yhat1']
+    # Make future predictions
+    status.write(f"Making future predictions for the next {num_months} months...")
+    forecast = model.predict(future)
+    status.write("Prediction complete.")
 
-        if scenario == 'Optimistic':
-            status.write("Using upper bound of the confidence interval for the Optimistic scenario.")
-            forecast_to_use = upper_bound
-        elif scenario == 'Pessimistic':
-            status.write("Using lower bound of the confidence interval for the Pessimistic scenario.")
-            forecast_to_use = lower_bound
-        else:  # Neutral
-            status.write("Using the forecast itself for the Neutral scenario.")
-            forecast_to_use = yhat
-
-        # Plotting (you can replace this with a more sophisticated plot)
-        st.line_chart(forecast_to_use)
-        status.write("Forecasting complete.")
-
+    # Plotting
+    fig_forecast = model.plot(forecast)
+    st.write(fig_forecast)
 ```
