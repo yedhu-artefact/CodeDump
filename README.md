@@ -1,6 +1,9 @@
 # CodeDump
 
 ```
+theme_override = {'bgcolor': ' rgb(180,151,231)','title_color': 'white','content_color': 'white','progress_color': ' rgb(180,151,231)'}
+ hc.progress_bar(content_text= 'Fill the Form', override_theme=theme_override)
+
 import streamlit as st
 import pandas as pd
 import numpy as np
