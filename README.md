@@ -1,6 +1,18 @@
 # CodeDump
 
 ```
+# Update the actual data points to a line
+for trace in fig_forecast['data']:
+    if trace.name == 'actual':
+        trace.mode = 'lines'  # Change from points to a line
+        trace.line = dict(color='blue', width=2)  # Customize the line if needed
+
+# Make the forecast line dotted
+for trace in fig_forecast['data']:
+    if trace.name == 'forecast':
+        trace.line = dict(dash='dot', color='red', width=2)
+
+
 theme_override = {'bgcolor': ' rgb(180,151,231)','title_color': 'white','content_color': 'white','progress_color': ' rgb(180,151,231)'}
  hc.progress_bar(content_text= 'Fill the Form', override_theme=theme_override)
 
