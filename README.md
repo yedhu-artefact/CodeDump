@@ -1,88 +1,57 @@
 # CodeDump
 
 ```
-# Update the actual data points to a line
-for trace in fig_forecast['data']:
-    if trace.name == 'actual':
-        trace.mode = 'lines'  # Change from points to a line
-        trace.line = dict(color='blue', width=2)  # Customize the line if needed
-
-# Make the forecast line dotted
-for trace in fig_forecast['data']:
-    if trace.name == 'forecast':
-        trace.line = dict(dash='dot', color='red', width=2)
-
-
-theme_override = {'bgcolor': ' rgb(180,151,231)','title_color': 'white','content_color': 'white','progress_color': ' rgb(180,151,231)'}
- hc.progress_bar(content_text= 'Fill the Form', override_theme=theme_override)
-
-import streamlit as st
 import pandas as pd
 import numpy as np
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_squared_error, mean_absolute_percentage_error
+from fbprophet import Prophet
 from neuralprophet import NeuralProphet
-from sklearn.linear_model import LinearRegression
 
-# Import data from CSV
-df = pd.read_csv('your_data.csv')
-df = df.sort_values('ds')
-train_df = df.copy()
+# Assume df is your DataFrame and 'y' is your target variable
 
-# Placeholder for status messages
-status = st.empty()
+# New Step: Fill missing values using interpolation
+df.interpolate(method='linear', inplace=True)
 
-# Number of months to forecast
-num_months = st.slider("Number of months to forecast:", 1, 24)
+# Step 1: Remove features that are highly correlated with each other
+corr_matrix = df.corr().abs()
+upper = corr_matrix.where(np.triu(np.ones(corr_matrix.shape), k=1).astype(np.bool))
+to_drop = [column for column in upper.columns if any(upper[column] > 0.95)]
+df = df.drop(df[to_drop], axis=1)
 
-# Multipliers for features
-multiplier_feature_1 = st.slider("Multiplier for feature_1:", 0.5, 1.5, 1.0)
-multiplier_feature_2 = st.slider("Multiplier for feature_2:", 0.5, 1.5, 1.0)
+# Step 2: Select top 20 features using feature importance from RandomForestRegressor
+X = df.drop(columns=['y'])
+y = df['y']
+model = RandomForestRegressor()
+model.fit(X, y)
+feature_importances = pd.DataFrame({'Feature': X.columns, 'Importance': model.feature_importances_})
+top_features = feature_importances.nlargest(20, 'Importance')['Feature']
 
-# Button to run the model
-if st.button('Run Model'):
-    status.write("Initializing Neural Prophet model...")
-    
-    model = NeuralProphet(
-        n_forecasts=1,
-        n_lags=30,
-        yearly_seasonality=True,
-        weekly_seasonality=False,
-        daily_seasonality=False,
-        uncertainty_samples=100
-    )
+# Step 3: Predict the next 12 months values for these features using Prophet
+future_values = {}
+for feature in top_features:
+    prophet = Prophet()
+    prophet.fit(df[['ds', feature]].rename(columns={feature: 'y'}))
+    future = prophet.make_future_dataframe(periods=12, freq='M')
+    forecast = prophet.predict(future)
+    future_values[feature] = forecast['yhat'][-12:].values
 
-    # Train separate models for each feature
-    future_regressors = pd.DataFrame()
-    for feature, multiplier in zip(['feature_1', 'feature_2'], [multiplier_feature_1, multiplier_feature_2]):
-        if feature in df.columns:
-            status.write(f"Training model for {feature}...")
-            X = np.arange(len(df)).reshape(-1, 1)
-            y = df[feature].values
-            reg_model = LinearRegression().fit(X, y)
+# Step 4: Test each feature as a future regressor with NeuralProphet and give a summary statistic of the error
+errors = {}
+for feature in top_features:
+    future_regressor_df = pd.DataFrame({'ds': df['ds'], 'y': df['y'], feature: future_values[feature]})
+    m = NeuralProphet()
+    m.add_future_regressor(name=feature)
+    metrics = m.fit(future_regressor_df, freq='M')
+    future = m.make_future_dataframe(future_regressor_df, periods=12)
+    forecast = m.predict(future)
+    mse = mean_squared_error(future_regressor_df['y'], forecast['yhat1'])
+    mape = mean_absolute_percentage_error(future_regressor_df['y'], forecast['yhat1'])
+    errors[feature] = {'MSE': mse, 'MAPE': mape}
 
-            # Predict future values of the feature
-            X_future = np.arange(len(df), len(df) + num_months).reshape(-1, 1)
-            future_values = reg_model.predict(X_future)
-            future_regressors[feature] = future_values * multiplier  # Apply multiplier
+# Summary statistic of the error
+error_summary = pd.DataFrame(errors).T.reset_index()
+error_summary.columns = ['Feature', 'MSE', 'MAPE']
+print(error_summary)
 
-    # Add lagged regressors to the NeuralProphet model
-    status.write("Adding lagged regressors to the NeuralProphet model...")
-    model = model.add_lagged_regressor(name='feature_1')
-    model = model.add_lagged_regressor(name='feature_2')
-
-    status.write("Training the NeuralProphet model...")
-    model.fit(train_df, freq="M")
-    status.write("Training complete.")
-
-    # Make future dataframe
-    future = model.make_future_dataframe(df, periods=num_months)
-    future = pd.concat([future, future_regressors], axis=1)  # Add future regressors
-
-    # Make future predictions
-    status.write(f"Making future predictions for the next {num_months} months...")
-    forecast = model.predict(future)
-    status.write("Prediction complete.")
-
-    # Plotting
-    fig_forecast = model.plot(forecast)
-    st.write(fig_forecast)
 ```
